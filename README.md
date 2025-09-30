@@ -4,6 +4,9 @@ Automates the lifecycle of an AWS EC2 instance: start → run → stop. Eliminat
 
 ## Features
 
+![Diagram for the flow of the script](https://github.com/Jain-Sameer/AWS-EC2-Automation-Script/blob/main/ec2_aws_script.drawio.png?raw=true)
+
+
 * Starts an EC2 instance and waits until it’s running.
 * Connects to the instance via SSH.
 * Stops the EC2 instance after exiting the SSH session.
