@@ -1,32 +1,41 @@
-#AWS EC2 Automation Script
 #!/bin/bash
 
-# Author: Sameer Jain
-# Purpose: Launch an EC2 instance, perform operations, and stop it automatically.
-# Version: v1
+#Author: Sameer Jain
+#Dated: 30-09-2025
+#Version: v2
+#Purpose: Launch an EC2 instance, perform operations, and stop it automatically.
 
-INSTANCE_ID="i-XXXXXXXXXXXXXXX"
-SSH_KEY_PATH="path/to/your/key.pem"
-INSTANCE_DNS="ec2-XX-XXX-XXX-XXX.compute.amazonaws.com"
+INSTANCE_ID="i-XXXXXXXXXXXXX"        
+SSH_KEY_PATH="$HOME/path/to/key.pem" 
+SSH_USER="ubuntu"                    
 
-output=$(aws ec2 start-instances --instance-ids "$INSTANCE_ID")
+# Start the EC2 instance
+aws ec2 start-instances --instance-ids "$INSTANCE_ID" >/dev/null
 
-prev_state=$(echo "$output" | jq -r '.StartingInstances[0].PreviousState.Name')
-curr_state=$(echo "$output" | jq -r '.StartingInstances[0].CurrentState.Name')
+# Keep checking for the status until it is "running"
+status=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --query "Reservations[*].Instances[*].State.Name" --output text)
+counter=1
+while [[ "$status" != "running" && "$counter" -lt 30 ]]; do
+    status=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --query "Reservations[*].Instances[*].State.Name" --output text)
+    counter=$((counter+1))
+    sleep 1
+done
 
-if [ "$prev_state" = "running" ]; then
-    echo "Instance already running"
-else
-    count=0
-    while [ $count -lt 30 ]; do
-        status=$(aws ec2 describe-instance-status --instance-ids "$INSTANCE_ID" \
-                 --output json | jq -r 'if .InstanceStatuses | length == 0 then "pending" else .InstanceStatuses[0].InstanceState.Name end')
-        [ "$status" = "running" ] && break
-        sleep 5
-        count=$((count+1))
-    done
+if [[ "$status" != "running" && "$counter" -eq 30 ]]; then
+    echo "Try again!"
+    exit
 fi
 
-ssh -i "$SSH_KEY_PATH" ubuntu@"$INSTANCE_DNS"
+# Retrieve the public IP of the instance
+ec2address=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --query "Reservations[*].Instances[*].PublicIpAddress" --output text)
 
-aws ec2 stop-instances --instance-ids "$INSTANCE_ID"
+if [ -z "$ec2address" ]; then
+    echo "Try again!"
+    exit
+fi
+
+# SSH into the instance
+ssh -i "$SSH_KEY_PATH" "$SSH_USER@$ec2address"
+
+# Stop the EC2 instance
+aws ec2 stop-instances --instance-ids "$INSTANCE_ID" >/dev/null
