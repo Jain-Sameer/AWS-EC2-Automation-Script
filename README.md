@@ -44,7 +44,7 @@ Automates the lifecycle of an AWS EC2 instance: start → run → stop. Eliminat
 
 ## Notes
 
-* The script waits up to 2.5 minutes for the instance to reach the `running` state (30 × 5 seconds). Adjust if needed.
+* The script waits up to 30 seconds for the instance to reach the `running` state. Adjust if needed.
 * No sensitive credentials should be hard-coded; always use placeholders or environment variables.
 
 ## License
