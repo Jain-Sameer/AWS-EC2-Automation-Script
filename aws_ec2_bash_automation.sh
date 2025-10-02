@@ -29,6 +29,26 @@ fi
 # Retrieve the public IP of the instance
 ec2address=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --query "Reservations[*].Instances[*].PublicIpAddress" --output text)
 
+echo "Waiting for SSH to become available on $ec2address ..."
+for i in {1..20}; do
+# -z allows us to check only if a connection can be made on the port or not, we can prevent sending any data over nc (netcat) using -z and just test for connectivity.
+# checking for 20 seconds if the port is open, if the port is not open then we can try again, or there might be something wrong with the instance.
+    nc -z "$ec2address" 22 >/dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        echo "SSH is ready."
+        break
+    fi
+    sleep 2
+done
+
+# If still not reachable
+nc -z "$ec2address" 22 >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+    echo "SSH not available. Exiting."
+    exit
+fi
+
+
 if [ -z "$ec2address" ]; then
     echo "Try again!"
     exit
